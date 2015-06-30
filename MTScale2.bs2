@@ -1,0 +1,67 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+'BS2 waits for the command sequence, "SI\r\n".
+'BS2 then sends a variable that is intialized to a low-end constant value.
+'BS2 then increments that variable by 10. Compares the the incremented variable
+' to a high-end constant value. If the incremented variable is greater than the
+' high-end constant, the variable is intialized to the low-end constant. If not,
+' the incremented variable is ready to be used.
+'This should result in a triangular waveform with constant minimum of zero
+'and constant maximum of HighEnd.
+'
+'Note: BS2 only does 2's compliment arithmatic on 16 bit bytes. No signed
+'arithmatic allowed!
+'
+'Note: Since we're using the dedicated sereal pin 16, your com port has to use
+'9600 baud 8N1, (8 data bits, No Parity, 1 Stop Bit)
+'
+'Note: This, MTScale2.bs2, is meant to be used on one of two BS2 running
+'at the same time and both connected to a Startech.com USB to RS232 hub. When
+'a Win8.1 program opens and configures a serial port, DSR must be hit because
+' the BS2 is reset. This means that if both are running with the Win8.1 program
+'at the same time, the program gets the same data. I don't consider this
+'to be very convincing of independent data collection so I've decied to create
+'and run two seperate BS2 programs. They'll do the same thing but in
+'opposite directions.
+
+'Constants
+HighEnd   CON       150
+Increment CON       10
+LowEnd    CON       10  'Don't think there will be negative weight values.
+
+CarRet    CON       $0D
+LnFd      CON       $0A
+
+SerialIn  CON       16
+SerialOut CON       16
+
+BaudValue CON       84 '9600 8N1, the default for BS2 dedicated serial pin.
+TimeOut   CON       2000
+
+'Variables:
+Direction           VAR     Bit  '1=Addition, 0=Subtraction
+NextWeight          VAR     Byte
+
+'main program loop:
+
+Direction = 0
+NextWeight = HighEnd
+Main:
+'Wait for the command string. I'm using decimal for command string "SI\r\n"
+'Using a 2 second timeout just for the hell of it.
+SERIN SerialIn,BaudValue,TimeOut,Main, [WAIT (83,73,13,10)]
+SEROUT SerialOut,BaudValue, [DEC NextWeight, CarRet, LnFd]
+IF (Direction = 1) THEN
+  NextWeight = NextWeight + Increment
+  IF (NextWeight > HighEnd) THEN
+    Direction = 0
+    NextWeight = HighEnd - Increment
+  ENDIF
+ELSEIF (Direction = 0) THEN
+  NextWeight = NextWeight - Increment
+  IF (NextWeight < LowEnd) THEN
+    Direction = 1
+  ENDIF
+ENDIF
+GOTO Main
+END
